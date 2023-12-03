@@ -1,5 +1,3 @@
-use std::collections::{btree_map::Values, HashMap};
-
 pub fn day01(input: &str) -> String {
     let sum: u64 = input
         .lines()
