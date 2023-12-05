@@ -43,13 +43,11 @@ pub fn day_02_02(input: &str) -> String {
         .lines()
         .map(|line| {
             let parts = line.split(":").collect::<Vec<&str>>();
-            let game_id = parts[0].split(" ").collect::<Vec<&str>>()[1];
             let mut hash_cubes: HashMap<&str, u32> = HashMap::new();
 
             hash_cubes.insert("red", 0);
             hash_cubes.insert("green", 0);
             hash_cubes.insert("blue", 0);
-            let mut allow_game = true;
             parts[1]
                 .split(";")
                 .collect::<Vec<&str>>()
