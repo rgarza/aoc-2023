@@ -24,17 +24,17 @@ pub fn day_03_01(input: &str) -> String {
                         let new_x = j as i32 + x;
                         let new_y = i as i32 + y;
 
-                    if new_x < 0 || new_y < 0 || new_x >= width || new_y >= height{
-                        continue;
-                    }
-                    let d = data.get(new_y as usize).unwrap().get(new_x as usize).unwrap();
-                    if d != &'.' && !d.is_digit(10) {
-                        println!("position y={}, x={}, adjacent ({}, {}) adjacent is {:?}", i, j, x, y, data.get(new_y as usize).unwrap().get(new_x as usize).unwrap());
-                        has_adjacent = true;
-                        break;
+                        if new_x < 0 || new_y < 0 || new_x >= width || new_y >= height{
+                            continue;
+                        }
+                        let d = data.get(new_y as usize).unwrap().get(new_x as usize).unwrap();
+                        if d != &'.' && !d.is_digit(10) {
+                            println!("position y={}, x={}, adjacent ({}, {}) adjacent is {:?}", i, j, x, y, data.get(new_y as usize).unwrap().get(new_x as usize).unwrap());
+                            has_adjacent = true;
+                            break;
+                        }
                     }
                 }
-            }
             } else { //last of sequence
                 println!("Number {}, has Adjacent {}", current_number, has_adjacent);
                 if has_adjacent {
