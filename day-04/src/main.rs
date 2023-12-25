@@ -77,14 +77,15 @@ pub fn day_04_02(input: &str) -> String {
                 card_total += 1;
             }
         }
-
+        let n: i64;
         if !number_of_cards.contains_key(&card_as_number) {
             number_of_cards.insert(card_as_number, 1);
+            n = 1;
         } else {
             let card = number_of_cards.get_mut(&card_as_number).unwrap();
             *card += 1;
+            n = *card;
         }
-        let n = number_of_cards.get(&card_as_number).unwrap().clone();
         for i in (card_as_number + 1)..(card_as_number + 1 + card_total) {
             println!("Card {}, gives another to {:?}", card_number, i);
             if !number_of_cards.contains_key(&i) {
