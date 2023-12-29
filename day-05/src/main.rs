@@ -57,22 +57,20 @@ pub fn day_05_01(input: &str) -> String {
 struct Conversion {
     source: i64,
     destination: i64,
-    max_source: i64,
+    max_destination: i64,
 }
 
 #[derive(Debug, Clone)]
 struct Almanac {
-    seeds: Vec<i64>,
     conversions: Vec<Vec<Conversion>>,
 }
 
 fn parse_input(input: &str) -> Almanac {
     let mut seeds_initialized: bool = false;
     let mut almanac: Almanac = Almanac {
-        seeds: Vec::new(),
         conversions: Vec::new(),
     };
-    let mut current: i8 = -1;
+    let mut current: usize = 0;
     input.lines().for_each(|line| {
         if !seeds_initialized {
             let seeds_line = line.split(":").collect::<Vec<&str>>();
@@ -84,15 +82,17 @@ fn parse_input(input: &str) -> Almanac {
                 .map(|seed: &str| seed.parse::<i64>().unwrap())
                 .collect::<Vec<i64>>();
 
+            almanac.conversions.push(Vec::new());
+            let conv = almanac.conversions.get_mut(current).unwrap();
             for i in (0..values.len()).step_by(2) {
                 let initial: &i64 = values.get(i).unwrap();
-
                 let length: &i64 = values.get(i + 1).unwrap();
-                for j in *initial..*initial + length {
-                    almanac.seeds.push(j);
-                }
+                conv.push(Conversion {
+                    source: *initial,
+                    destination: *initial,
+                    max_destination: *initial + *length - 1,
+                });
             }
-            println!("Number of seeds {}", almanac.seeds.len());
             seeds_initialized = true;
         } else {
             if line.len() == 0 {
@@ -109,12 +109,12 @@ fn parse_input(input: &str) -> Almanac {
                 let destination: &i64 = values.get(0).unwrap();
                 let source: &i64 = values.get(1).unwrap();
                 let length = values.get(2).unwrap();
-                let conv = almanac.conversions.get_mut(current as usize);
+                let conv = almanac.conversions.get_mut(current as usize).unwrap();
 
-                conv.unwrap().push(Conversion {
+                conv.push(Conversion {
                     source: *source,
                     destination: *destination,
-                    max_source: *source + *length - 1,
+                    max_destination: *destination + *length - 1,
                 });
             }
         }
@@ -123,32 +123,37 @@ fn parse_input(input: &str) -> Almanac {
     almanac
 }
 pub fn day_05_02(input: &str) -> String {
-    let mut result: Vec<i64> = vec![];
     let mut almanac = parse_input(input);
 
-    for (_idx, seed) in almanac.seeds.iter_mut().enumerate() {
-        let mut current_chain = seed.clone();
-        for conversion in almanac.conversions.iter() {
-            let mut found: bool = false;
-            for c in conversion {
-                if current_chain >= c.source && current_chain <= c.max_source {
-                    current_chain = (current_chain - c.source) + c.destination;
+    for location in 0..2_000_000_000 {
+        let mut current_value = location.clone();
+
+        let mut found: bool = false;
+        for c in almanac.conversions.iter().rev() {
+            for conv in c {
+                found = false;
+                if current_value >= conv.destination && current_value <= conv.max_destination {
                     found = true;
-                }
-                if found {
+                    current_value = (current_value - conv.destination) + conv.source;
                     break;
                 }
             }
         }
-        result.push(current_chain);
+        if found {
+            return format!("{}", location);
+        }
     }
 
-    format!("{}", result.iter().min().unwrap())
+    "NOT".to_string()
 }
 
 fn main() {
     let input = include_str!("./day_05_input.txt");
-    println!("day 05 01 {}", day_05_01(input));
+    println!(
+        "
+             day 05 01 {}",
+        day_05_01(input)
+    );
     println!("day 05 02 {}", day_05_02(input));
 }
 
