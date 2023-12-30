@@ -33,6 +33,23 @@ impl PartialEq for Results {
     }
 }
 
+const fn decode_char_joker(x: char) -> u8 {
+    match x {
+        'A' => 15,
+        'K' => 14,
+        'Q' => 13,
+        'J' => 0,
+        'T' => 11,
+        '9' => 9,
+        '8' => 8,
+        '7' => 7,
+        '6' => 6,
+        '5' => 5,
+        '4' => 4,
+        '3' => 3,
+        _ => 2,
+    }
+}
 const fn decode_char(x: char) -> u8 {
     match x {
         'A' => 15,
@@ -94,49 +111,53 @@ fn parse_input_part_01(input: &str) -> Vec<Game> {
         .collect()
 }
 
-pub fn day_07_01(input: &str) -> String {
-    let games = parse_input_part_01(input);
-    let mut results: Vec<Results> = Vec::new();
-    for game in games {
-        let grouped_hand = game.hand.chars().fold(HashMap::new(), |mut acc, c| {
-            if !acc.contains_key(&c) {
-                acc.insert(c, 1);
-            } else {
-                let a = acc.get_mut(&c).unwrap();
-                *a += 1;
-            }
+pub fn get_hand_type(hand: HashMap<i64, Vec<char>>) -> HandKind {
+    let kind: HandKind;
 
-            acc
-        });
-        let mut g = HashMap::new();
-
-        for (k, v) in grouped_hand {
-            g.entry(v).or_insert_with(Vec::new).push(k)
-        }
-        let kind: HandKind;
-        if g.get(&5).is_some() {
-            kind = HandKind::FiveOfAKind;
-        } else if g.get(&4).is_some() {
-            kind = HandKind::FourOfAKind;
-        } else if g.get(&3).is_some() && g.get(&2).is_some() {
-            kind = HandKind::FullHouse;
-        } else if g.get(&3).is_some() {
-            kind = HandKind::ThreeOfAKind;
-        } else if let Some(pair) = g.get(&2) {
-            if pair.len() > 1 {
-                kind = HandKind::TwoPair;
-            } else {
-                kind = HandKind::OnePair;
-            }
+    if hand.get(&5).is_some() {
+        kind = HandKind::FiveOfAKind;
+    } else if hand.get(&4).is_some() {
+        kind = HandKind::FourOfAKind;
+    } else if hand.get(&3).is_some() && hand.get(&2).is_some() {
+        kind = HandKind::FullHouse;
+    } else if hand.get(&3).is_some() {
+        kind = HandKind::ThreeOfAKind;
+    } else if let Some(pair) = hand.get(&2) {
+        if pair.len() > 1 {
+            kind = HandKind::TwoPair;
         } else {
-            kind = HandKind::HighCard;
+            kind = HandKind::OnePair;
         }
-        results.push(Results {
-            hand: game.hand,
-            bid: game.bid,
-            kind,
-        });
+    } else {
+        kind = HandKind::HighCard;
     }
+
+    kind
+}
+fn group_hand(game: &Game) -> HashMap<char, i64> {
+    game.hand.chars().fold(HashMap::new(), |mut acc, c| {
+        if !acc.contains_key(&c) {
+            acc.insert(c, 1);
+        } else {
+            let a = acc.get_mut(&c).unwrap();
+            *a += 1;
+        }
+        acc
+    })
+}
+fn inverse_map<T, D>(hand: &HashMap<T, D>) -> HashMap<D, Vec<T>>
+where
+    D: Eq + std::hash::Hash + Clone,
+    T: Clone,
+{
+    let mut g: HashMap<D, Vec<T>> = HashMap::new();
+
+    for (k, v) in hand {
+        g.entry(v.clone()).or_insert_with(Vec::new).push(k.clone())
+    }
+    g
+}
+fn get_total_winnings(mut results: Vec<Results>) -> i64 {
     results.sort();
     let mut t: i64 = 0;
     for (idx, a) in results.iter().enumerate() {
@@ -148,7 +169,22 @@ pub fn day_07_01(input: &str) -> String {
         );
         t += (idx + 1) as i64 * a.bid;
     }
-    format!("{}", t)
+    t
+}
+pub fn day_07_01(input: &str) -> String {
+    let games = parse_input_part_01(input);
+    let mut results: Vec<Results> = Vec::new();
+    for game in games {
+        let hand = group_hand(&game);
+        let inversed_hand = inverse_map(&hand);
+        results.push(Results {
+            hand: game.hand,
+            bid: game.bid,
+            kind: get_hand_type(inversed_hand),
+        });
+    }
+
+    format!("{}", get_total_winnings(results))
 }
 #[cfg(test)]
 mod tests {
