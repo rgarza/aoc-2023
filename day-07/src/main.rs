@@ -1,4 +1,4 @@
-use std::{collections::HashMap, slice::Iter};
+use std::collections::HashMap;
 
 const fn decode_char_joker(x: char) -> u8 {
     match x {
@@ -45,22 +45,6 @@ enum HandKind {
     OnePair = 1,
     HighCard = 0,
 }
-
-impl HandKind {
-    pub fn iterator() -> Iter<'static, HandKind> {
-        static HAND_KINDS: [HandKind; 7] = [
-            HandKind::FiveOfAKind,
-            HandKind::FourOfAKind,
-            HandKind::FullHouse,
-            HandKind::ThreeOfAKind,
-            HandKind::TwoPair,
-            HandKind::OnePair,
-            HandKind::HighCard,
-        ];
-        HAND_KINDS.iter()
-    }
-}
-#[derive(Debug, Clone)]
 struct Results {
     hand: String,
     bid: i64,
@@ -101,6 +85,46 @@ impl PartialOrd for Results {
     }
 }
 
+struct ResultsPart2 {
+    hand: String,
+    bid: i64,
+    kind: HandKind,
+}
+
+impl Ord for ResultsPart2 {
+    fn cmp(&self, other: &Self) -> std::cmp::Ordering {
+        if self.kind == other.kind {
+            println!("{:?} == {:?}", self.kind, other.kind);
+        }
+        return self.kind.cmp(&other.kind);
+    }
+}
+impl Eq for ResultsPart2 {}
+impl PartialEq for ResultsPart2 {
+    fn eq(&self, other: &Self) -> bool {
+        self.kind.eq(&other.kind)
+    }
+}
+
+impl PartialOrd for ResultsPart2 {
+    fn partial_cmp(&self, other: &Self) -> Option<std::cmp::Ordering> {
+        if self.kind == other.kind {
+            let chars = self.hand.chars();
+            let mut other_chars = other.hand.chars();
+            for c in chars {
+                let next_char = other_chars.next().unwrap();
+                if next_char != c {
+                    let v = decode_char_joker(c);
+                    let v2 = decode_char_joker(next_char);
+                    return Some(v.cmp(&v2));
+                }
+            }
+            return Some(core::cmp::Ordering::Equal);
+        }
+        Some(self.kind.cmp(&other.kind))
+    }
+}
+
 #[derive(Debug, Clone)]
 struct Game {
     hand: String,
@@ -109,6 +133,7 @@ struct Game {
 fn main() {
     let input = include_str!("./day_07_input.txt");
     println!("Day 07 Part 01 {:?}", day_07_01(input));
+    println!("Day 07 Part 02 {:?}", day_07_02(input));
 }
 
 fn parse_input_part_01(input: &str) -> Vec<Game> {
@@ -171,16 +196,20 @@ where
     }
     g
 }
+
+fn get_total_winnings_part2(mut results: Vec<ResultsPart2>) -> i64 {
+    results.sort();
+    let mut t: i64 = 0;
+    for (idx, a) in results.iter().enumerate() {
+        t += (idx + 1) as i64 * a.bid;
+    }
+    t
+}
+
 fn get_total_winnings(mut results: Vec<Results>) -> i64 {
     results.sort();
     let mut t: i64 = 0;
     for (idx, a) in results.iter().enumerate() {
-        println!(
-            "{:?} * {:?} = {:?}",
-            a.bid,
-            idx + 1,
-            a.bid * (idx + 1) as i64
-        );
         t += (idx + 1) as i64 * a.bid;
     }
     t
@@ -240,10 +269,15 @@ fn try_jokers(
             }
             HandKind::HighCard => {
                 // convert one to pair
-                let h = result.get_mut(&1).unwrap();
-                let val = h.get(0).unwrap().clone();
-                h.remove(1);
-                result.insert(2, vec![val]);
+                if let Some(h) = result.get_mut(&1) {
+                    let val = h.get(0).unwrap().clone();
+                    if h.len() > 1 {
+                        h.remove(1);
+                    }
+                    result.insert(2, vec![val]);
+                } else {
+                    result.insert(1, vec!['2']);
+                }
             }
         }
         remainning_jokers -= 1;
@@ -252,7 +286,7 @@ fn try_jokers(
 }
 pub fn day_07_02(input: &str) -> String {
     let games = parse_input_part_01(input);
-    let mut results: Vec<Results> = Vec::new();
+    let mut results: Vec<ResultsPart2> = Vec::new();
     for game in games {
         let mut hand = group_hand(&game);
         let jokers = hand.get(&'J');
@@ -262,24 +296,20 @@ pub fn day_07_02(input: &str) -> String {
             let number_of_jokers = jokers.unwrap().clone();
             hand.remove(&'J');
             inversed_hand = inverse_map(&hand);
-            println!(
-                "Hand {}, has {} jokers, hand without jokers {:?}",
-                game.hand, number_of_jokers, hand
-            );
+
             inversed_hand = try_jokers(&inversed_hand, number_of_jokers);
-            println!("new inversed hand{:?}", inversed_hand);
         } else {
             inversed_hand = inverse_map(&hand);
         }
 
-        results.push(Results {
+        results.push(ResultsPart2 {
             hand: game.hand,
             bid: game.bid,
             kind: get_hand_type(inversed_hand),
         });
     }
 
-    format!("{}", get_total_winnings(results))
+    format!("{}", get_total_winnings_part2(results))
 }
 #[cfg(test)]
 mod tests {
