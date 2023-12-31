@@ -1,37 +1,4 @@
-use std::collections::HashMap;
-
-#[derive(Debug, Clone, Eq, PartialEq, PartialOrd, Ord, Copy)]
-enum HandKind {
-    FiveOfAKind = 6,
-    FourOfAKind = 5,
-    FullHouse = 4,
-    ThreeOfAKind = 3,
-    TwoPair = 2,
-    OnePair = 1,
-    HighCard = 0,
-}
-
-#[derive(Debug, Clone)]
-struct Results {
-    hand: String,
-    bid: i64,
-    kind: HandKind,
-}
-
-impl Ord for Results {
-    fn cmp(&self, other: &Self) -> std::cmp::Ordering {
-        if self.kind == other.kind {
-            println!("{:?} == {:?}", self.kind, other.kind);
-        }
-        return self.kind.cmp(&other.kind);
-    }
-}
-impl Eq for Results {}
-impl PartialEq for Results {
-    fn eq(&self, other: &Self) -> bool {
-        self.kind.eq(&other.kind)
-    }
-}
+use std::{collections::HashMap, slice::Iter};
 
 const fn decode_char_joker(x: char) -> u8 {
     match x {
@@ -65,6 +32,53 @@ const fn decode_char(x: char) -> u8 {
         '4' => 4,
         '3' => 3,
         _ => 2,
+    }
+}
+
+#[derive(Debug, Clone, Eq, PartialEq, PartialOrd, Ord, Copy)]
+enum HandKind {
+    FiveOfAKind = 6,
+    FourOfAKind = 5,
+    FullHouse = 4,
+    ThreeOfAKind = 3,
+    TwoPair = 2,
+    OnePair = 1,
+    HighCard = 0,
+}
+
+impl HandKind {
+    pub fn iterator() -> Iter<'static, HandKind> {
+        static HAND_KINDS: [HandKind; 7] = [
+            HandKind::FiveOfAKind,
+            HandKind::FourOfAKind,
+            HandKind::FullHouse,
+            HandKind::ThreeOfAKind,
+            HandKind::TwoPair,
+            HandKind::OnePair,
+            HandKind::HighCard,
+        ];
+        HAND_KINDS.iter()
+    }
+}
+#[derive(Debug, Clone)]
+struct Results {
+    hand: String,
+    bid: i64,
+    kind: HandKind,
+}
+
+impl Ord for Results {
+    fn cmp(&self, other: &Self) -> std::cmp::Ordering {
+        if self.kind == other.kind {
+            println!("{:?} == {:?}", self.kind, other.kind);
+        }
+        return self.kind.cmp(&other.kind);
+    }
+}
+impl Eq for Results {}
+impl PartialEq for Results {
+    fn eq(&self, other: &Self) -> bool {
+        self.kind.eq(&other.kind)
     }
 }
 
@@ -111,7 +125,7 @@ fn parse_input_part_01(input: &str) -> Vec<Game> {
         .collect()
 }
 
-pub fn get_hand_type(hand: HashMap<i64, Vec<char>>) -> HandKind {
+fn get_hand_type(hand: HashMap<i64, Vec<char>>) -> HandKind {
     let kind: HandKind;
 
     if hand.get(&5).is_some() {
@@ -171,12 +185,93 @@ fn get_total_winnings(mut results: Vec<Results>) -> i64 {
     }
     t
 }
+
 pub fn day_07_01(input: &str) -> String {
     let games = parse_input_part_01(input);
     let mut results: Vec<Results> = Vec::new();
     for game in games {
         let hand = group_hand(&game);
         let inversed_hand = inverse_map(&hand);
+        results.push(Results {
+            hand: game.hand,
+            bid: game.bid,
+            kind: get_hand_type(inversed_hand),
+        });
+    }
+
+    format!("{}", get_total_winnings(results))
+}
+
+fn try_jokers(
+    hand_without_jokers: &HashMap<i64, Vec<char>>,
+    number_of_jokers: i64,
+) -> HashMap<i64, Vec<char>> {
+    let mut result = hand_without_jokers.clone();
+    let mut remainning_jokers = number_of_jokers;
+    while remainning_jokers > 0 {
+        let hand_kind = get_hand_type(result.clone());
+        match hand_kind {
+            HandKind::FiveOfAKind => {}
+            HandKind::FourOfAKind => {
+                if let Some(four_of_a_kind) = result.get(&4) {
+                    //we can have only 1 so we increase it
+                    result.insert(5, four_of_a_kind.clone());
+                    result.remove(&4);
+                }
+            }
+            HandKind::FullHouse | HandKind::ThreeOfAKind => {
+                // convert to Four of Kind
+                let three = result.get(&3).unwrap();
+                result.insert(4, three.clone());
+                result.remove(&3);
+            }
+            HandKind::TwoPair => {
+                //convert to full house
+                let pairs = result.get_mut(&2).unwrap();
+                let val = pairs.get(0).unwrap().clone();
+                pairs.remove(1);
+                result.insert(3, vec![val]);
+            }
+            HandKind::OnePair => {
+                // convert to Three of a kind
+                let pair = result.get(&2).unwrap();
+                result.insert(3, pair.clone());
+                result.remove(&2);
+            }
+            HandKind::HighCard => {
+                // convert one to pair
+                let h = result.get_mut(&1).unwrap();
+                let val = h.get(0).unwrap().clone();
+                h.remove(1);
+                result.insert(2, vec![val]);
+            }
+        }
+        remainning_jokers -= 1;
+    }
+    result
+}
+pub fn day_07_02(input: &str) -> String {
+    let games = parse_input_part_01(input);
+    let mut results: Vec<Results> = Vec::new();
+    for game in games {
+        let mut hand = group_hand(&game);
+        let jokers = hand.get(&'J');
+        let mut inversed_hand: HashMap<i64, Vec<char>>;
+
+        if jokers.is_some() {
+            let number_of_jokers = jokers.unwrap().clone();
+            hand.remove(&'J');
+            inversed_hand = inverse_map(&hand);
+            println!(
+                "Hand {}, has {} jokers, hand without jokers {:?}",
+                game.hand, number_of_jokers, hand
+            );
+            inversed_hand = try_jokers(&inversed_hand, number_of_jokers);
+            println!("new inversed hand{:?}", inversed_hand);
+        } else {
+            inversed_hand = inverse_map(&hand);
+        }
+
         results.push(Results {
             hand: game.hand,
             bid: game.bid,
@@ -194,5 +289,10 @@ mod tests {
     fn day_07_part_01() {
         let input = include_str!("./day_07_sample.txt");
         assert_eq!(String::from("6440"), day_07_01(input));
+    }
+    #[test]
+    fn day_07_part_02() {
+        let input = include_str!("./day_07_sample.txt");
+        assert_eq!(String::from("5905"), day_07_02(input));
     }
 }
