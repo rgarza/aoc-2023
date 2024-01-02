@@ -1,6 +1,7 @@
 fn main() {
     let input = include_str!("./day_09_input.txt");
     println!("Day 09 part 01 {}", day_09_01(input));
+    println!("Day 09 part 02 {}", day_09_02(input));
 }
 
 fn process_line(values: &Vec<i64>, zeroes: i64) -> i64 {
@@ -35,6 +36,21 @@ pub fn day_09_01(input: &str) -> String {
     format!("{}", sum)
 }
 
+pub fn day_09_02(input: &str) -> String {
+    let sum: i64 = input
+        .lines()
+        .map(|line| {
+            let values: Vec<i64> = line
+                .split_whitespace()
+                .map(|m| m.parse::<i64>().unwrap())
+                .rev()
+                .collect::<Vec<i64>>();
+            process_line(&values, 0)
+        })
+        .sum();
+    format!("{}", sum)
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -43,5 +59,10 @@ mod tests {
     fn day_09_part_01() {
         let input = include_str!("./day_09_sample.txt");
         assert_eq!(String::from("114"), day_09_01(input));
+    }
+    #[test]
+    fn day_09_part_02() {
+        let input = include_str!("./day_09_sample.txt");
+        assert_eq!(String::from("2"), day_09_02(input));
     }
 }
