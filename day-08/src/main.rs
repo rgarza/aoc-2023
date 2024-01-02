@@ -1,4 +1,4 @@
-use std::collections::HashMap;
+use std::{collections::HashMap, time::Instant};
 
 fn main() {
     let input = include_str!("./day_08_input.txt");
@@ -44,12 +44,12 @@ fn parse_input_01(input: &str) -> Puzzle {
 }
 
 pub fn day_08_01(input: &str) -> String {
+    let instant = Instant::now();
     let puzzle = parse_input_01(input);
     let mut steps: i64 = 0;
     let mut current_instruction: usize = 0;
     let mut current_node_value: String = "AAA".to_string();
     while current_node_value != "ZZZ" {
-        println!("{}", current_node_value);
         let current_node = puzzle.nodes.get(&current_node_value).unwrap();
         let use_node = puzzle.instructions.get(current_instruction).unwrap();
         current_node_value = match use_node {
@@ -57,12 +57,13 @@ pub fn day_08_01(input: &str) -> String {
             _ => current_node.1.clone(),
         };
         steps += 1;
-        println!("{}", current_node_value);
         current_instruction += 1;
         if current_instruction >= puzzle.instructions.len() {
             current_instruction = 0;
         }
     }
+    let elapsed = instant.elapsed();
+    println!("time elapsed {:.2?}", elapsed);
     format!("{}", steps)
 }
 
@@ -81,6 +82,7 @@ fn get_nodes_ending_with_letter(puzzle: &Puzzle) -> Vec<CurrentNode> {
 }
 
 pub fn day_08_02(input: &str) -> String {
+    let instant = Instant::now();
     let puzzle = parse_input_01(input);
     let queue = get_nodes_ending_with_letter(&puzzle);
 
@@ -89,7 +91,6 @@ pub fn day_08_02(input: &str) -> String {
         let mut instructions = puzzle.instructions.iter().cycle();
         let mut current_node_value = c.current_node_value.clone();
         let mut number_of_steps: i64 = 0;
-        println!("{}", c.current_node_value);
         while !current_node_value.ends_with("Z") {
             let current_instruction = instructions.next().unwrap();
             let node = puzzle.nodes.get(&current_node_value).unwrap();
@@ -111,7 +112,8 @@ pub fn day_08_02(input: &str) -> String {
     while let Some(n) = iter.next() {
         ans = lcm(ans, *n);
     }
-
+    let elapsed = instant.elapsed();
+    println!("time elapsed: {:.2?}", elapsed);
     format!("{}", ans)
 }
 
